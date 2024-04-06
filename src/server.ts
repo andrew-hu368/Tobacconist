@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
 import closeWithGrace from "close-with-grace";
 import fastify, { type FastifyServerOptions } from "fastify";
@@ -8,6 +9,7 @@ import { jwt } from "./plugins/jwt";
 import { prisma } from "./plugins/prisma";
 import { redis } from "./plugins/redis";
 import { productsRoute } from "./routes/products";
+import { siteRoute } from "./routes/site";
 import { tokensRoute } from "./routes/tokens";
 
 async function main() {
@@ -37,6 +39,10 @@ async function main() {
   await app.register(jwt);
   await app.register(redis);
   await app.register(bullmq);
+  await app.register(import("@fastify/static"), {
+    root: join(__dirname, "../public"),
+  });
+  await app.register(siteRoute);
 
   // ROUTES
   await app.register(import("fastify-healthcheck"));
