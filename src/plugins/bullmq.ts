@@ -74,6 +74,9 @@ export const bullmq = fp(
       {
         removeOnComplete: 30,
         removeOnFail: 30,
+        repeat: {
+          pattern: "0 */12 * * *",
+        },
       },
     );
 

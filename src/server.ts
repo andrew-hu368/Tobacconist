@@ -3,10 +3,10 @@ import closeWithGrace from "close-with-grace";
 import fastify, { type FastifyServerOptions } from "fastify";
 
 import { bullmq } from "./plugins/bullmq";
+import { config } from "./plugins/config";
 import { jwt } from "./plugins/jwt";
 import { prisma } from "./plugins/prisma";
 import { redis } from "./plugins/redis";
-import { config } from "./plugins/config";
 import { productsRoute } from "./routes/products";
 import { tokensRoute } from "./routes/tokens";
 
@@ -66,7 +66,6 @@ async function main() {
         app.log.error(err);
         process.exit(1);
       }
-      app.log.info(`Server listening on port ${port}`);
     },
   );
 
