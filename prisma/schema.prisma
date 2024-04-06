@@ -27,7 +27,7 @@ model Product {
   price              Int?
   groupCode          String
   groupDescription   String
-  productCode        String
+  productCode        String   @unique
   productDescription String?
   active             Boolean
   createdAt          DateTime @default(now())

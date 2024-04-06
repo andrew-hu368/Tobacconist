@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { Transform, Writable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { type PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import { Client } from "basic-ftp";
 import { Queue, Worker } from "bullmq";
 import { FastifyInstance } from "fastify";
@@ -40,7 +40,6 @@ export const bullmq = fp(
 
         if (job.name === INIT_DAILY_DATA_DOWNLOAD) {
           return initDailyDataDownload({
-            logger: fastify.log,
             config: fastify.config,
             onComplete: onCompletedDailyDataDownload,
             data: job.data,
@@ -49,7 +48,6 @@ export const bullmq = fp(
 
         if (job.name === PROCESS_DAILY_DATA) {
           return processDailyData({
-            logger: fastify.log,
             data: job.data,
             prisma: fastify.prisma,
           });
@@ -96,18 +94,14 @@ export const bullmq = fp(
 );
 
 async function initDailyDataDownload({
-  logger,
   config,
   onComplete,
   data,
 }: {
-  logger: FastifyInstance["log"];
   config: FastifyInstance["config"];
   onComplete: () => Promise<void>;
   data: { fileName: string };
 }) {
-  logger.info("Downloading daily data");
-
   const client = new Client();
   client.ftp.verbose = config.NODE_ENV === "development";
 
@@ -123,22 +117,16 @@ async function initDailyDataDownload({
   client.close();
 
   await onComplete();
-
-  logger.info("Downloaded daily data");
 }
 
 async function processDailyData({
   prisma,
-  logger,
   data,
 }: {
   prisma: FastifyInstance["prisma"];
-  logger: FastifyInstance["log"];
   data: { fileName: string };
 }) {
-  logger.info("Processing daily data");
-
-  const tobaccoXmlReadStream = fs.createReadStream(FILE_NAME);
+  const tobaccoXmlReadStream = fs.createReadStream(data.fileName);
 
   await pipeline([
     tobaccoXmlReadStream,
@@ -152,8 +140,7 @@ async function processDailyData({
     new ProductsWritable(prisma),
   ]);
 
-  fs.existsSync(FILE_NAME) && fs.unlinkSync(FILE_NAME);
-  logger.info("Processing daily data completed");
+  fs.existsSync(data.fileName) && fs.unlinkSync(data.fileName);
 }
 
 class TransformProduct extends Transform {
@@ -185,7 +172,7 @@ class TransformProduct extends Transform {
           oldCode: article.oldCode,
           description: article.description,
           price: article.price
-            ? parseInt(article.price.replace(",", "."))
+            ? parseInt(article.price.replace(",", ".")) * 100
             : undefined,
           disbarred: article.disbarred,
           groupCode: chunk.value!.code,
@@ -219,19 +206,36 @@ class ProductsWritable extends Writable {
   ) {
     if (chunk.disbarred === "1") {
       this.prisma.product
-        .updateMany({
+        .findMany({
           where: {
             productCode: chunk.code !== "" ? chunk.code : chunk.oldCode,
           },
-          data: {
-            active: false,
+          include: {
+            barcodes: true,
           },
+        })
+        .then((products) => {
+          const activeProducts = products.filter((product) => product.active);
+
+          if (activeProducts.length) {
+            return this.prisma.product.updateMany({
+              where: {
+                productCode: chunk.code !== "" ? chunk.code : chunk.oldCode,
+              },
+              data: {
+                active: false,
+              },
+            });
+          }
+
+          return void 0;
         })
         .then(() => callback(null))
         .catch(callback);
     } else if (chunk.disbarred === "0" && chunk.code !== "") {
+      // In theory, there should be only a unique product code
       this.prisma.product
-        .findFirst({
+        .findUnique({
           where: {
             productCode: chunk.code,
           },
@@ -242,46 +246,97 @@ class ProductsWritable extends Writable {
         // @ts-expect-error - It seems to be useless type checking
         .then((product) => {
           if (product) {
-            return this.prisma.$transaction([
-              this.prisma.product.update({
-                where: {
-                  id: product.id,
-                },
-                data: {
-                  price: chunk.price,
-                },
-              }),
-              ...chunk.barcodes.map((barcode) => {
-                const existingBarcode = product.barcodes.find(
-                  (b) => b.barcode === barcode.value,
-                );
+            const shouldUpdateProduct =
+              product.price !== chunk.price ||
+              product.productDescription !== chunk.description ||
+              product.groupCode !== chunk.groupCode ||
+              product.groupDescription !== chunk.groupDescription;
 
-                if (existingBarcode) {
+            const barcodesToUpdate = product.barcodes.filter((barcode) => {
+              const barcodeChunk = chunk.barcodes.find(
+                (b) => b.value === barcode.barcode,
+              );
+
+              return (
+                barcodeChunk?.quantity &&
+                barcode.quantity !== barcodeChunk.quantity
+              );
+            });
+            const barcodesToCreate = chunk.barcodes.filter((barcode) => {
+              return !product.barcodes.find((b) => b.barcode === barcode.value);
+            });
+            const barcodesToDelete = product.barcodes.filter((barcode) => {
+              return !chunk.barcodes.find((b) => b.value === barcode.barcode);
+            });
+
+            const transactions: Prisma.PrismaPromise<any>[] = [];
+
+            if (shouldUpdateProduct) {
+              transactions.push(
+                this.prisma.product.update({
+                  where: {
+                    id: product.id,
+                  },
+                  data: {
+                    price: chunk.price,
+                    productDescription: chunk.description,
+                    groupCode: chunk.groupCode,
+                    groupDescription: chunk.groupDescription,
+                  },
+                }),
+              );
+            }
+
+            if (barcodesToUpdate.length) {
+              transactions.push(
+                ...barcodesToUpdate.map((barcode) => {
+                  const barcodeChunk = chunk.barcodes.find(
+                    (b) => b.value === barcode.barcode,
+                  );
+
                   return this.prisma.barcode.update({
                     where: {
-                      id: existingBarcode.id,
+                      id: barcode.id,
                     },
                     data: {
-                      quantity: barcode.quantity,
-                      barcode: barcode.value,
+                      quantity: barcodeChunk!.quantity,
                     },
                   });
-                }
-                return this.prisma.product.update({
+                }),
+              );
+            }
+
+            if (barcodesToCreate.length) {
+              transactions.push(
+                this.prisma.product.update({
                   where: {
                     id: product.id,
                   },
                   data: {
                     barcodes: {
-                      create: {
+                      create: barcodesToCreate.map((barcode) => ({
                         quantity: barcode.quantity,
                         barcode: barcode.value,
-                      },
+                      })),
                     },
                   },
-                });
-              }),
-            ]);
+                }),
+              );
+            }
+
+            if (barcodesToDelete.length) {
+              transactions.push(
+                this.prisma.barcode.deleteMany({
+                  where: {
+                    id: {
+                      in: barcodesToDelete.map((barcode) => barcode.id),
+                    },
+                  },
+                }),
+              );
+            }
+
+            return this.prisma.$transaction(transactions);
           }
 
           return this.prisma.product.create({
