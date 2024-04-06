@@ -63,20 +63,25 @@ export const bullmq = fp(
     fastify.decorate("queues", [queue]);
     fastify.decorate("workers", [worker]);
 
-    // TODO: Add repeatable job to download daily data
-    await queue.add(
-      INIT_DAILY_DATA_DOWNLOAD,
-      {
-        fileName: FILE_NAME,
-      },
-      {
-        removeOnComplete: 30,
-        removeOnFail: 30,
-        repeat: {
-          pattern: "0 */12 * * *",
-        },
-      },
+    const existingJobs = await queue.getRepeatableJobs();
+    const hasInitDailyDataDownloadJob = existingJobs.find(
+      (job) => job.name === INIT_DAILY_DATA_DOWNLOAD,
     );
+    if (!hasInitDailyDataDownloadJob) {
+      await queue.add(
+        INIT_DAILY_DATA_DOWNLOAD,
+        {
+          fileName: FILE_NAME,
+        },
+        {
+          removeOnComplete: 30,
+          removeOnFail: 30,
+          repeat: {
+            pattern: "0 */12 * * *",
+          },
+        },
+      );
+    }
 
     worker.on("completed", (job) => {
       fastify.log.info(`Job id ${job.id} with name ${job.name} has completed`);
