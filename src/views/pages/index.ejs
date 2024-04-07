@@ -1,20 +1,14 @@
 <!doctype html>
 <html lang="it">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Tobacconist - Codici a barre dei tabacchi</title>
-    <meta
-      name="description"
-      content="Codici a barre dei tabacchi, gratta e vinci e altri prodotti delle tabaccherie"
-    />
-    <meta
-      name="keywords"
-      content="tabacchi, codici a barre, gratta e vinci, tabaccherie"
-    />
-    <link rel="stylesheet" href="/assets/css/tailwind.css" />
-  </head>
+  <%- include("../partials/head") %>
   <body>
-    <h1 class="text-3xl font-semibold">Home</h1>
-    <p>Benvenuto nella home page del sito</p>
+    <% products.forEach(product => { %>
+    <div class="border border-gray-200 p-4 my-4">
+      <h2 class="text-xl font-semibold"><%= product.name %></h2>
+      <p><%= product.description %></p>
+      <p><%= product.price %></p>
+      <p><%= product.updatedAt %></p>
+    </div>
+    <% }) %>
   </body>
 </html>

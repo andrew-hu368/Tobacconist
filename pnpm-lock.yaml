@@ -87,6 +87,9 @@ devDependencies:
   autoprefixer:
     specifier: ^10.4.19
     version: 10.4.19(postcss@8.4.38)
+  cp:
+    specifier: ^0.2.0
+    version: 0.2.0
   esbuild:
     specifier: ^0.20.2
     version: 0.20.2
@@ -108,6 +111,9 @@ devDependencies:
   fastify-tsconfig:
     specifier: github:fastify/tsconfig
     version: github.com/fastify/tsconfig/1615d8007061027861b605652350d8bd3dfd56b3
+  mkdirp:
+    specifier: ^3.0.1
+    version: 3.0.1
   npm-run-all:
     specifier: ^4.1.5
     version: 4.1.5
@@ -117,6 +123,9 @@ devDependencies:
   prettier:
     specifier: ^3.2.5
     version: 3.2.5
+  prettier-plugin-ejs:
+    specifier: ^1.0.3
+    version: 1.0.3(prettier@3.2.5)
   prisma:
     specifier: ^5.11.0
     version: 5.11.0
@@ -1792,6 +1801,10 @@ packages:
     engines: {node: '>= 0.6'}
     dev: false
 
+  /cp@0.2.0:
+    resolution: {integrity: sha512-4ftCvShHjIZG/zzomHyunNpBof3sOFTTmU6s6q9DdqAL/ANqrKV3pr6Z6kVfBI4hjn59DFLImrBqn7GuuMqSZA==}
+    dev: true
+
   /cron-parser@4.9.0:
     resolution: {integrity: sha512-p0SaNjrHOnQeR8/VnfGbmg9te2kfyYSQ7Sc/j/6DtPL3JQvKxmjO9TSjNFpujqV3vEYYBvNNvXSxzyksBWAx1Q==}
     engines: {node: '>=12.0.0'}
@@ -3264,6 +3277,12 @@ packages:
     resolution: {integrity: sha512-jYofLM5Dam9279rdkWzqHozUo4ybjdZmCsDHePy5V/PbBcVMiSZR97gmAy45aqi8CK1lG2ECd356FU86avfwUQ==}
     engines: {node: '>=16 || 14 >=14.17'}
 
+  /mkdirp@3.0.1:
+    resolution: {integrity: sha512-+NsyUUAZDmo6YVHzL/stxSu3t9YS1iljliy3BSDrXJ/dkn1KYdmtZODGGjLcc9XLgVVpH4KshHB8XmZgMhaBXg==}
+    engines: {node: '>=10'}
+    hasBin: true
+    dev: true
+
   /mnemonist@0.39.8:
     resolution: {integrity: sha512-vyWo2K3fjrUw8YeeZ1zF0fy6Mu59RHokURlld8ymdUPjMlD9EC9ov1/YPqTgqRvUN9nTr3Gqfz29LYAmu0PHPQ==}
     dependencies:
@@ -3684,6 +3703,14 @@ packages:
     engines: {node: '>=6.0.0'}
     dependencies:
       fast-diff: 1.3.0
+    dev: true
+
+  /prettier-plugin-ejs@1.0.3(prettier@3.2.5):
+    resolution: {integrity: sha512-wTL4U/ou6dHHp1ZTfS67SHVb/dRgVhpIOTgCvkgdqF/Lw6A472W90dxFtsWSXIR7GmLZRgZb2PdArR9ozxX7cg==}
+    peerDependencies:
+      prettier: 2.x - 3.x
+    dependencies:
+      prettier: 3.2.5
     dev: true
 
   /prettier@3.2.5:

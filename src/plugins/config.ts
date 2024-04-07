@@ -1,5 +1,5 @@
+import { Static, Type } from "@sinclair/typebox";
 import fp from "fastify-plugin";
-import { Type, Static } from "@sinclair/typebox";
 
 const CONFIG_SCHEMA = Type.Object({
   PORT: Type.Optional(

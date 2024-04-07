@@ -1,8 +1,8 @@
 /**
- * @type {import('prettier').Config & import("@ianvs/prettier-plugin-sort-imports").PluginConfig}
+ * @type {import('prettier').Config & import("prettier-plugin-ejs").PluginConfig & import("@ianvs/prettier-plugin-sort-imports").PluginConfig}
  */
 const config = {
-  plugins: ["@ianvs/prettier-plugin-sort-imports"],
+  plugins: ["prettier-plugin-ejs", "@ianvs/prettier-plugin-sort-imports"],
   importOrder: ["<THIRD_PARTY_MODULES>", "", "^~/", "^[.][.]/", "^[.]/"],
   importOrderParserPlugins: ["typescript", "decorators-legacy"],
   importOrderTypeScriptVersion: "4.4.0",
