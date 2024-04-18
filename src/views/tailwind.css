@@ -7,5 +7,40 @@
     --bg-primary: #000212;
     --brand-text: #fff;
     --brand-bg: #5e6ad2;
+    --table-header: rgb(23, 24, 26);
+    --table-row: rgb(15, 16, 17);
+  }
+
+  @font-face {
+    font-family: "Geist";
+    font-style: normal;
+    font-weight: 400 500 600;
+    font-display: swap;
+    src:
+      local("Geist-Regular"),
+      url("../fonts/Geist-Regular.woff2") format("woff2"),
+      url("../fonts/Geist-Regular.woff") format("woff");
+  }
+
+  @font-face {
+    font-family: "Geist";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src:
+      local("Geist-Medium"),
+      url("../fonts/Geist-Medium.woff2") format("woff2"),
+      url("../fonts/Geist-Medium.woff") format("woff");
+  }
+
+  @font-face {
+    font-family: "Geist";
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src:
+      local("Geist-SemiBold"),
+      url("../fonts/Geist-SemiBold.woff2") format("woff2"),
+      url("../fonts/Geist-SemiBold.woff") format("woff");
   }
 }

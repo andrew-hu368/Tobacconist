@@ -15,16 +15,12 @@ export async function siteRoute(fastify: FastifyInstance) {
     viewExt: "ejs",
   });
 
-  const currencyFormatter = new Intl.NumberFormat("it-IT", {
-    style: "currency",
-    currency: "EUR",
-  });
   const dateFormat = new Intl.DateTimeFormat("it-IT", {
     dateStyle: "medium",
     timeStyle: "short",
   });
 
-  fastify.get("/", async (request, reply) => {
+  fastify.get("/", async (_request, reply) => {
     const products = await fastify.prisma.product.findMany({
       select: {
         name: true,
