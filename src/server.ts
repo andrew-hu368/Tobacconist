@@ -53,7 +53,7 @@ async function main() {
     prefix: "/v1/products",
   });
 
-  if (app.config.NODE_ENV === "development") {
+  if (app.config.NODE_ENV !== "production") {
     app.addHook("onReady", (done) => {
       app.log.info(app.printRoutes());
       done();

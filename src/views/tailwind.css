@@ -1,3 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #000212;
+    --brand-text: #fff;
+    --brand-bg: #5e6ad2;
+  }
+}

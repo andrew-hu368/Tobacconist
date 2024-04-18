@@ -28,7 +28,8 @@ export async function siteRoute(fastify: FastifyInstance) {
     const products = await fastify.prisma.product.findMany({
       select: {
         name: true,
-        price: true,
+        groupDescription: true,
+        active: true,
         updatedAt: true,
       },
       take: 10,
@@ -42,7 +43,8 @@ export async function siteRoute(fastify: FastifyInstance) {
         "Gli ultimi dati aggiornati sui codici a barre dei tabacchi, gratta e vinci, lotterie istantanee e altri prodotti dei tabaccai.",
       products: products.map((p) => ({
         name: p.name,
-        price: p.price ? currencyFormatter.format(p.price / 100) : "N/A",
+        groupDescription: p.groupDescription,
+        active: p.active ? "Attivo" : "Ritirato",
         updatedAt: dateFormat.format(p.updatedAt),
       })),
     });
