@@ -66,7 +66,7 @@ class ProductStore {
 
   async getProduct(id: ProductParam["id"]) {
     const productBarcodes = await this.db.$queryRaw<GetProductBarcodesRaw>(
-      Prisma.sql`SELECT Product.id AS id, Product.name AS name, Product.price AS price, Product.groupCode AS groupCode, Product.groupDescription AS groupDescription, Product.productCode AS productCode, Product.active AS active, Product.createdAt AS createdAt, Product.updatedAt AS updatedAt, Barcode.id AS barcodeId, Barcode.barcode AS barcode, Barcode.quantity AS quantity FROM Product LEFT JOIN Barcode ON Product.id = Barcode.productId WHERE Product.id = ${id}`,
+      Prisma.sql`SELECT Product.id AS id, Product.name AS name, Product.price AS price, Product.groupCode AS groupCode, Product.groupDescription AS groupDescription, Product.productCode AS productCode, Product.productDescription AS productDescription, Product.active AS active, Product.createdAt AS createdAt, Product.updatedAt AS updatedAt, Barcode.id AS barcodeId, Barcode.barcode AS barcode, Barcode.quantity AS quantity FROM Product LEFT JOIN Barcode ON Product.id = Barcode.productId WHERE Product.id = ${id}`,
     );
 
     const products = this._formatProduct(productBarcodes);
@@ -132,7 +132,7 @@ class ProductStore {
 
   async getProducts() {
     const productsBarcodes = await this.db.$queryRaw<GetProductBarcodesRaw>(
-      Prisma.sql`SELECT Product.id AS id, Product.name AS name, Product.price AS price, Product.groupCode AS groupCode, Product.groupDescription AS groupDescription, Product.productCode AS productCode, Product.active AS active, Product.createdAt AS createdAt, Product.updatedAt AS updatedAt, Barcode.id AS barcodeId, Barcode.barcode AS barcode, Barcode.quantity AS quantity FROM Product LEFT JOIN Barcode ON Product.id = Barcode.productId`,
+      Prisma.sql`SELECT Product.id AS id, Product.name AS name, Product.price AS price, Product.groupCode AS groupCode, Product.groupDescription AS groupDescription, Product.productCode AS productCode, Product.productDescription AS productDescription, Product.active AS active, Product.createdAt AS createdAt, Product.updatedAt AS updatedAt, Barcode.id AS barcodeId, Barcode.barcode AS barcode, Barcode.quantity AS quantity FROM Product LEFT JOIN Barcode ON Product.id = Barcode.productId`,
     );
 
     return this._formatProduct(productsBarcodes);
