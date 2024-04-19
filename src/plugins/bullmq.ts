@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import { Transform, Writable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { Prisma, type PrismaClient } from "@prisma/client";
 import { Client } from "basic-ftp";
 import { Queue, Worker } from "bullmq";
 import { FastifyInstance } from "fastify";
@@ -49,7 +48,7 @@ export const bullmq = fp(
         if (job.name === PROCESS_DAILY_DATA) {
           return processDailyData({
             data: job.data,
-            prisma: fastify.prisma,
+            productStore: fastify.productStore,
           });
         }
 
@@ -94,7 +93,7 @@ export const bullmq = fp(
   },
   {
     name: "bullmq",
-    dependencies: ["redis", "prisma"],
+    dependencies: ["redis", "productStore"],
   },
 );
 
@@ -125,10 +124,10 @@ async function initDailyDataDownload({
 }
 
 async function processDailyData({
-  prisma,
+  productStore,
   data,
 }: {
-  prisma: FastifyInstance["prisma"];
+  productStore: FastifyInstance["productStore"];
   data: { fileName: string };
 }) {
   const tobaccoXmlReadStream = fs.createReadStream(data.fileName);
@@ -142,7 +141,7 @@ async function processDailyData({
     pick({ filter: "Group" }),
     streamArray(),
     new TransformProduct(),
-    new ProductsWritable(prisma),
+    new ProductsWritable(productStore),
   ]);
 
   fs.existsSync(data.fileName) && fs.unlinkSync(data.fileName);
@@ -198,10 +197,10 @@ class TransformProduct extends Transform {
 }
 
 class ProductsWritable extends Writable {
-  private readonly prisma: PrismaClient;
-  constructor(prisma: PrismaClient) {
+  private readonly productStore: FastifyInstance["productStore"];
+  constructor(productStore: FastifyInstance["productStore"]) {
     super({ objectMode: true, highWaterMark: 16 });
-    this.prisma = prisma;
+    this.productStore = productStore;
   }
 
   _write(
@@ -209,157 +208,51 @@ class ProductsWritable extends Writable {
     _: any,
     callback: (err?: Error | null) => void,
   ) {
-    if (chunk.disbarred === "1") {
-      this.prisma.product
-        .findMany({
-          where: {
-            productCode: chunk.code !== "" ? chunk.code : chunk.oldCode,
-          },
-          include: {
-            barcodes: true,
-          },
-        })
-        .then((products) => {
-          const activeProducts = products.filter((product) => product.active);
-
-          if (activeProducts.length) {
-            return this.prisma.product.updateMany({
-              where: {
-                productCode: chunk.code !== "" ? chunk.code : chunk.oldCode,
-              },
-              data: {
-                active: false,
-              },
-            });
-          }
-
-          return void 0;
-        })
+    if (
+      chunk.disbarred === "1" &&
+      (chunk.code !== "" || chunk.oldCode !== "")
+    ) {
+      this.productStore
+        .updateProduct(
+          { productCode: chunk.code ?? chunk.oldCode },
+          { active: false },
+        )
         .then(() => callback(null))
         .catch(callback);
     } else if (chunk.disbarred === "0" && chunk.code !== "") {
-      // In theory, there should be only a unique product code
-      this.prisma.product
-        .findUnique({
-          where: {
-            productCode: chunk.code,
-          },
-          include: {
-            barcodes: true,
-          },
-        })
-        // @ts-expect-error - It seems to be useless type checking
+      this.productStore
+        .getProduct({ productCode: chunk.code })
         .then((product) => {
           if (product) {
-            const shouldUpdateProduct =
-              product.price !== chunk.price ||
-              product.productDescription !== chunk.description ||
-              product.groupCode !== chunk.groupCode ||
-              product.groupDescription !== chunk.groupDescription;
-
-            const barcodesToUpdate = product.barcodes.filter((barcode) => {
-              const barcodeChunk = chunk.barcodes.find(
-                (b) => b.value === barcode.barcode,
-              );
-
-              return (
-                barcodeChunk?.quantity &&
-                barcode.quantity !== barcodeChunk.quantity
-              );
-            });
-            const barcodesToCreate = chunk.barcodes.filter((barcode) => {
-              return !product.barcodes.find((b) => b.barcode === barcode.value);
-            });
-            const barcodesToDelete = product.barcodes.filter((barcode) => {
-              return !chunk.barcodes.find((b) => b.value === barcode.barcode);
-            });
-
-            const transactions: Prisma.PrismaPromise<any>[] = [];
-
-            if (shouldUpdateProduct) {
-              transactions.push(
-                this.prisma.product.update({
-                  where: {
-                    id: product.id,
-                  },
-                  data: {
-                    price: chunk.price,
-                    productDescription: chunk.description,
-                    groupCode: chunk.groupCode,
-                    groupDescription: chunk.groupDescription,
-                  },
-                }),
-              );
-            }
-
-            if (barcodesToUpdate.length) {
-              transactions.push(
-                ...barcodesToUpdate.map((barcode) => {
-                  const barcodeChunk = chunk.barcodes.find(
-                    (b) => b.value === barcode.barcode,
-                  );
-
-                  return this.prisma.barcode.update({
-                    where: {
-                      id: barcode.id,
-                    },
-                    data: {
-                      quantity: barcodeChunk!.quantity,
-                    },
-                  });
-                }),
-              );
-            }
-
-            if (barcodesToCreate.length) {
-              transactions.push(
-                this.prisma.product.update({
-                  where: {
-                    id: product.id,
-                  },
-                  data: {
-                    barcodes: {
-                      create: barcodesToCreate.map((barcode) => ({
-                        quantity: barcode.quantity,
-                        barcode: barcode.value,
-                      })),
-                    },
-                  },
-                }),
-              );
-            }
-
-            if (barcodesToDelete.length) {
-              transactions.push(
-                this.prisma.barcode.deleteMany({
-                  where: {
-                    id: {
-                      in: barcodesToDelete.map((barcode) => barcode.id),
-                    },
-                  },
-                }),
-              );
-            }
-
-            return this.prisma.$transaction(transactions);
-          }
-
-          return this.prisma.product.create({
-            data: {
-              price: chunk.price,
-              productCode: chunk.code,
-              productDescription: chunk.description,
-              active: true,
-              groupCode: chunk.groupCode,
-              groupDescription: chunk.groupDescription,
-              name: chunk.description,
-              barcodes: {
-                create: chunk.barcodes.map((barcode) => ({
+            return this.productStore.updateProduct(
+              { productCode: chunk.code },
+              {
+                name: chunk.description,
+                productDescription: chunk.description,
+                groupCode: chunk.groupCode,
+                groupDescription: chunk.groupDescription,
+                price: chunk.price ?? null,
+                active: true,
+                barcodes: chunk.barcodes.map((barcode) => ({
                   quantity: barcode.quantity,
                   barcode: barcode.value,
                 })),
               },
-            },
+            );
+          }
+
+          return this.productStore.createProduct({
+            name: chunk.description,
+            productCode: chunk.code,
+            productDescription: chunk.description,
+            groupCode: chunk.groupCode,
+            groupDescription: chunk.groupDescription,
+            price: chunk.price ?? null,
+            active: true,
+            barcodes: chunk.barcodes.map((barcode) => ({
+              quantity: barcode.quantity,
+              barcode: barcode.value,
+            })),
           });
         })
         .then(() => callback(null))

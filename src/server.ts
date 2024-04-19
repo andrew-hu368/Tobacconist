@@ -37,13 +37,13 @@ async function main() {
   await app.register(config);
   await app.register(import("@fastify/sensible"));
   await app.register(prisma);
+  await app.register(productStore);
   await app.register(jwt);
   await app.register(redis);
   await app.register(bullmq);
   await app.register(import("@fastify/static"), {
     root: join(__dirname, "../public"),
   });
-  await app.register(productStore);
 
   // ROUTES
   await app.register(siteRoute);
