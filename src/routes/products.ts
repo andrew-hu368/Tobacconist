@@ -1,20 +1,15 @@
-import { Prisma } from "@prisma/client";
 import { Static, Type } from "@sinclair/typebox";
 import { FastifyInstance } from "fastify";
 
-const PRODUCT_SCHEMA = Type.Object({
-  productId: Type.String(),
-  productName: Type.String(),
-  productPrice: Type.Optional(Type.Number()),
-  barcodes: Type.Array(
-    Type.Object({
-      barcode: Type.String(),
-      quantity: Type.Number(),
-    }),
-  ),
-});
+import {
+  CreateProductBody,
+  Product,
+  ProductParam,
+  UpdateProductBody,
+} from "../plugins/product-store";
 
-const PRODUCTS_SCHEMA = Type.Array(PRODUCT_SCHEMA);
+const Products = Type.Array(Product);
+type Products = Static<typeof Products>;
 
 export async function productsRoute(fastify: FastifyInstance) {
   fastify.addHook("onRequest", async (request, reply) => {
@@ -22,8 +17,7 @@ export async function productsRoute(fastify: FastifyInstance) {
       const token = request.headers.authorization?.split(" ")[1];
 
       if (!token) {
-        reply.statusCode = 401;
-        return reply.send(new Error("Unauthorized"));
+        return reply.unauthorized();
       }
 
       const decodedToken = fastify.jwt.decode(token, { complete: true }) as {
@@ -32,8 +26,16 @@ export async function productsRoute(fastify: FastifyInstance) {
       } | null;
 
       if (!decodedToken) {
-        reply.statusCode = 401;
-        return reply.send(new Error("Unauthorized"));
+        return reply.unauthorized();
+      }
+
+      if (
+        (request.method === "POST" ||
+          request.method === "PUT" ||
+          request.method === "DELETE") &&
+        decodedToken.payload.role !== "admin"
+      ) {
+        return reply.forbidden();
       }
 
       const foundToken = await fastify.prisma.token.findMany({
@@ -42,68 +44,71 @@ export async function productsRoute(fastify: FastifyInstance) {
         },
       });
       if (!foundToken.length) {
-        return reply.send(new Error("Unauthorized"));
+        return reply.unauthorized();
       }
     } catch (err) {
-      return reply.send(err);
+      return reply.internalServerError((err as Error).message);
     }
   });
 
-  fastify.get<{ Reply: Static<typeof PRODUCTS_SCHEMA> }>(
+  fastify.post<{ Body: CreateProductBody }>(
+    "/",
+    {
+      schema: {
+        body: CreateProductBody,
+        response: {
+          201: Product,
+        },
+      },
+    },
+    async (request, reply) => {
+      const product = await fastify.productStore.createProduct(request.body);
+
+      return reply.code(201).send(product);
+    },
+  );
+
+  fastify.put<{
+    Params: ProductParam;
+    Body: UpdateProductBody;
+  }>(
+    "/:id",
+    {
+      schema: {
+        params: ProductParam,
+        body: UpdateProductBody,
+        response: {
+          200: Product,
+        },
+      },
+    },
+    async (request, reply) => {
+      const product = await fastify.productStore.updateProduct(
+        request.params.id,
+        request.body,
+      );
+
+      if (!product) {
+        return reply.notFound();
+      }
+
+      return product;
+    },
+  );
+
+  fastify.get<{ Reply: Products }>(
     "/",
     {
       schema: {
         response: {
-          200: PRODUCTS_SCHEMA,
+          200: Products,
         },
       },
     },
     async (_, __) => {
-      const unformattedProducts: {
-        productId: string;
-        productName: string;
-        productPrice: number;
-        barcode: string;
-        quantity: number;
-      }[] = await fastify.prisma.$queryRaw(
-        Prisma.sql`SELECT Product.id AS productId, Product.name AS productName, Product.price AS productPrice, Barcode.barcode AS barcode, Barcode.quantity AS quantity FROM Product LEFT JOIN Barcode ON Product.id = Barcode.productId`,
-      );
+      const products = await fastify.productStore.getProducts();
 
-      const products = unformattedProducts.reduce(
-        (acc, product) => {
-          if (!acc.has(product.productId)) {
-            acc.set(product.productId, {
-              productId: product.productId,
-              productName: product.productName,
-              productPrice: product.productPrice,
-              barcodes: [],
-            });
-          }
-
-          if (product.barcode) {
-            acc.get(product.productId)?.barcodes.push({
-              barcode: product.barcode,
-              quantity: product.quantity,
-            });
-          }
-
-          return acc;
-        },
-        new Map<
-          string,
-          {
-            productId: string;
-            productName: string;
-            productPrice: number;
-            barcodes: {
-              barcode: string;
-              quantity: number;
-            }[];
-          }
-        >(),
-      );
-
-      return Array.from(products.values());
+      return products;
     },
   );
 }

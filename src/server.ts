@@ -7,6 +7,7 @@ import { bullmq } from "./plugins/bullmq";
 import { config } from "./plugins/config";
 import { jwt } from "./plugins/jwt";
 import { prisma } from "./plugins/prisma";
+import { productStore } from "./plugins/product-store";
 import { redis } from "./plugins/redis";
 import { productsRoute } from "./routes/products";
 import { siteRoute } from "./routes/site";
@@ -42,9 +43,10 @@ async function main() {
   await app.register(import("@fastify/static"), {
     root: join(__dirname, "../public"),
   });
-  await app.register(siteRoute);
+  await app.register(productStore);
 
   // ROUTES
+  await app.register(siteRoute);
   await app.register(import("fastify-healthcheck"));
   await app.register(tokensRoute, {
     prefix: "/v1/tokens",
