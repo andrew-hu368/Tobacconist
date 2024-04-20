@@ -3,6 +3,7 @@ import { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
 import closeWithGrace from "close-with-grace";
 import fastify, { type FastifyServerOptions } from "fastify";
 
+import { bullBoard } from "./plugins/bull-board";
 import { bullmq } from "./plugins/bullmq";
 import { config } from "./plugins/config";
 import { jwt } from "./plugins/jwt";
@@ -41,6 +42,7 @@ async function main() {
   await app.register(jwt);
   await app.register(redis);
   await app.register(bullmq);
+  await app.register(bullBoard);
   await app.register(import("@fastify/static"), {
     root: join(__dirname, "../public"),
   });

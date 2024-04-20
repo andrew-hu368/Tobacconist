@@ -23,6 +23,8 @@ const CONFIG_SCHEMA = Type.Object({
   FTP_HOST: Type.String(),
   FTP_USER: Type.String(),
   FTP_PASS: Type.String(),
+  BULL_BOARD_USER: Type.String(),
+  BULL_BOARD_PASS: Type.String(),
 });
 
 export const config = fp(async (fastify) => {

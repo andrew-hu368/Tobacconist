@@ -26,6 +26,9 @@
   "author": "Andrew Hu <hu.lha86@gmail> (https://andrewhu.dev)",
   "license": "MIT",
   "dependencies": {
+    "@bull-board/api": "^5.16.0",
+    "@bull-board/fastify": "^5.16.0",
+    "@fastify/basic-auth": "^5.1.1",
     "@fastify/env": "^4.3.0",
     "@fastify/jwt": "^8.0.0",
     "@fastify/redis": "^6.1.1",
