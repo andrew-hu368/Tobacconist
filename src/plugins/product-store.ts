@@ -49,14 +49,14 @@ type GetProductBarcodesRaw = (Omit<Product, "barcodes"> &
   Omit<Barcode, "id"> & { barcodeId: Barcode["id"] })[];
 
 class ProductStore {
-  private db: PrismaClient;
+  private _db: PrismaClient;
 
   constructor(db: PrismaClient) {
-    this.db = db;
+    this._db = db;
   }
 
   async createProduct({ barcodes, ...rest }: CreateProductBody) {
-    const product = await this.db.product.create({
+    const product = await this._db.product.create({
       data: {
         ...rest,
         barcodes: {
@@ -79,9 +79,14 @@ class ProductStore {
       throw new Error("Expected either id or productCode to be provided.");
     }
 
-    const productBarcodes = await this.db.$queryRaw<GetProductBarcodesRaw>(
-      Prisma.sql`SELECT Product.id AS id, Product.name AS name, Product.price AS price, Product.groupCode AS groupCode, Product.groupDescription AS groupDescription, Product.productCode AS productCode, Product.productDescription AS productDescription, Product.active AS active, Product.createdAt AS createdAt, Product.updatedAt AS updatedAt, Barcode.id AS barcodeId, Barcode.barcode AS barcode, Barcode.quantity AS quantity FROM Product LEFT JOIN Barcode ON Product.id = Barcode.productId WHERE ${id ? `Product.id = ${id}` : `Product.productCode = '${productCode}`}`,
-    );
+    const condition = id
+      ? `p.id = '${id}'`
+      : `p.productCode = '${productCode}'`;
+
+    const productBarcodes =
+      await this._db.$queryRawUnsafe<GetProductBarcodesRaw>(
+        `SELECT r.id AS id, r.name AS name, r.price AS price, r.groupCode AS groupCode, r.groupDescription AS groupDescription, r.productCode AS productCode, r.productDescription AS productDescription, r.active AS active, r.createdAt AS createdAt, r.updatedAt AS updatedAt, b.id AS barcodeId, b.barcode AS barcode, b.quantity AS quantity FROM (SELECT * FROM Product p WHERE ${condition}) AS r LEFT JOIN Barcode b ON r.id = b.productId`,
+      );
 
     const products = this._formatProduct(productBarcodes);
 
@@ -119,8 +124,8 @@ class ProductStore {
       barcodes?.find((b2) => b2.id === b.id),
     );
 
-    await this.db.$transaction([
-      this.db.product.update({
+    await this._db.$transaction([
+      this._db.product.update({
         data: {
           ...rest,
           barcodes: {
@@ -132,14 +137,14 @@ class ProductStore {
         },
       }),
       ...deletedBarcodes.map((b) => {
-        return this.db.barcode.delete({
+        return this._db.barcode.delete({
           where: {
             id: b.id,
           },
         });
       }),
       ...updatedBarcodes?.map((b) => {
-        return this.db.barcode.update({
+        return this._db.barcode.update({
           data: b,
           where: {
             id: b.id,
@@ -152,8 +157,8 @@ class ProductStore {
   }
 
   async getProducts() {
-    const productsBarcodes = await this.db.$queryRaw<GetProductBarcodesRaw>(
-      Prisma.sql`SELECT Product.id AS id, Product.name AS name, Product.price AS price, Product.groupCode AS groupCode, Product.groupDescription AS groupDescription, Product.productCode AS productCode, Product.productDescription AS productDescription, Product.active AS active, Product.createdAt AS createdAt, Product.updatedAt AS updatedAt, Barcode.id AS barcodeId, Barcode.barcode AS barcode, Barcode.quantity AS quantity FROM Product LEFT JOIN Barcode ON Product.id = Barcode.productId`,
+    const productsBarcodes = await this._db.$queryRaw<GetProductBarcodesRaw>(
+      Prisma.sql`SELECT p.id AS id, p.name AS name, p.price AS price, p.groupCode AS groupCode, p.groupDescription AS groupDescription, p.productCode AS productCode, p.productDescription AS productDescription, p.active AS active, p.createdAt AS createdAt, p.updatedAt AS updatedAt, b.id AS barcodeId, b.barcode AS barcode, b.quantity AS quantity FROM Product p LEFT JOIN Barcode b ON p.id = b.productId`,
     );
 
     return this._formatProduct(productsBarcodes);

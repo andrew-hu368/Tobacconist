@@ -33,7 +33,7 @@ export async function productsRoute(fastify: FastifyInstance) {
         (request.method === "POST" ||
           request.method === "PUT" ||
           request.method === "DELETE") &&
-        decodedToken.payload.role !== "admin"
+        decodedToken.payload.role !== "master"
       ) {
         return reply.forbidden();
       }
@@ -84,7 +84,7 @@ export async function productsRoute(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const product = await fastify.productStore.updateProduct(
-        request.params.id,
+        { id: request.params.id },
         request.body,
       );
 

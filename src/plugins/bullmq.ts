@@ -208,10 +208,7 @@ class ProductsWritable extends Writable {
     _: any,
     callback: (err?: Error | null) => void,
   ) {
-    if (
-      chunk.disbarred === "1" &&
-      (chunk.code !== "" || chunk.oldCode !== "")
-    ) {
+    if (chunk.disbarred === "1" && (chunk.code ?? chunk.oldCode)) {
       this.productStore
         .updateProduct(
           { productCode: chunk.code ?? chunk.oldCode },
@@ -219,41 +216,27 @@ class ProductsWritable extends Writable {
         )
         .then(() => callback(null))
         .catch(callback);
-    } else if (chunk.disbarred === "0" && chunk.code !== "") {
+    } else if (chunk.disbarred === "0" && chunk.code) {
+      const currentProduct = {
+        name: chunk.description,
+        productCode: chunk.code,
+        productDescription: chunk.description,
+        groupCode: chunk.groupCode,
+        groupDescription: chunk.groupDescription,
+        price: chunk.price ?? null,
+        active: true,
+        barcodes: chunk.barcodes.map((barcode) => ({
+          quantity: barcode.quantity,
+          barcode: barcode.value,
+        })),
+      };
       this.productStore
-        .getProduct({ productCode: chunk.code })
-        .then((product) => {
-          if (product) {
-            return this.productStore.updateProduct(
-              { productCode: chunk.code },
-              {
-                name: chunk.description,
-                productDescription: chunk.description,
-                groupCode: chunk.groupCode,
-                groupDescription: chunk.groupDescription,
-                price: chunk.price ?? null,
-                active: true,
-                barcodes: chunk.barcodes.map((barcode) => ({
-                  quantity: barcode.quantity,
-                  barcode: barcode.value,
-                })),
-              },
-            );
+        .updateProduct({ productCode: chunk.code }, currentProduct)
+        .then((p) => {
+          if (!p) {
+            return this.productStore.createProduct(currentProduct);
           }
-
-          return this.productStore.createProduct({
-            name: chunk.description,
-            productCode: chunk.code,
-            productDescription: chunk.description,
-            groupCode: chunk.groupCode,
-            groupDescription: chunk.groupDescription,
-            price: chunk.price ?? null,
-            active: true,
-            barcodes: chunk.barcodes.map((barcode) => ({
-              quantity: barcode.quantity,
-              barcode: barcode.value,
-            })),
-          });
+          return p;
         })
         .then(() => callback(null))
         .catch(callback);

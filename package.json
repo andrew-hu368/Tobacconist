@@ -11,7 +11,7 @@
     "build:html": "mkdirp dist/views && cp -r src/views/pages dist/views/pages && cp -r src/views/partials dist/views/",
     "build:css": "tailwindcss -i src/views/tailwind.css -o public/assets/css/tailwind.css",
     "dev": "npm-run-all -p dev:*",
-    "dev:server": "tsx --watch ./src/server.ts .env",
+    "dev:server": "tsx --watch ./src/server.ts",
     "dev:css": "pnpm build:css --watch",
     "format": "prettier --write src prettier.config.mjs .eslintrc.js postcss.config.js tailwind.config.js",
     "lint": "eslint --ext .ts src",
