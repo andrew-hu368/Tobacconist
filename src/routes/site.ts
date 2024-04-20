@@ -39,7 +39,8 @@ export async function siteRoute(fastify: FastifyInstance) {
         "Gli ultimi dati aggiornati sui codici a barre dei tabacchi, gratta e vinci, lotterie istantanee e altri prodotti dei tabaccai.",
       products: products.map((p) => ({
         name: p.name,
-        groupDescription: p.groupDescription,
+        groupDescription:
+          p.groupDescription === "NonClassificato" ? "N/D" : p.groupDescription,
         active: p.active ? "Attivo" : "Ritirato",
         updatedAt: dateFormat.format(p.updatedAt),
       })),
