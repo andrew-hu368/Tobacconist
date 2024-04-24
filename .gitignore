@@ -6,5 +6,5 @@ node_modules
 # Ignore local files
 dist
 TobaccoData*
-prisma/dev.sqlite*
+prisma/dev*
 public/assets/css/tailwind.css
