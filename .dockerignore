@@ -1,0 +1,10 @@
+dist
+node_modules
+
+.env*
+.eslintrc.js
+.gitignore
+.nvmrc
+Dockerfile
+prettier.config.js
+README.md
