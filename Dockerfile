@@ -33,18 +33,6 @@ COPY --from=deps --chown=node:node /app/node_modules ./node_modules
 
 USER node
 
-ENV TURSO_AUTH_TOKEN="your-auth-token"
-ENV TURSO_DATABASE_URL="http://127.0.0.1:8080/prisma/dev"
-ENV NODE_ENV="production"
-ENV PORT=3000
-ENV REDIS_URL="redis://localhost:6379"
-ENV FTP_HOST="ftp.example.com"
-ENV FTP_USER="user"
-ENV FTP_PASS="pass"
-ENV JWT_SECRET="s3cr3t!"
-ENV BULL_BOARD_USER="user"
-ENV BULL_BOARD_PASS="pass"
-
 # Use dumb-init to handle signals properly
 # https://github.com/nodejs/docker-node/blob/main/docs/BestPractices.md#handling-kernel-signals
 CMD ["dumb-init", "node", "dist/server.js"]
