@@ -8,7 +8,7 @@ ENV PATH="$PNPM_HOME:$PATH"
 # Install openssl for prisma, corepack and pnpm
 RUN apt-get update -y && apt-get install -y openssl dumb-init && corepack enable && corepack prepare pnpm@8.5.1 --activate
 
-WORKDIR /app
+WORKDIR /home/node
 
 COPY . .
 
@@ -25,11 +25,11 @@ FROM installer
 
 RUN apt-get update && apt-get install -y dumb-init
 
-WORKDIR /app
+WORKDIR /home/node
 
-COPY --from=builder --chown=node:node /app/dist ./dist
-COPY --from=builder --chown=node:node /app/public ./public
-COPY --from=deps --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /home/node/dist ./dist
+COPY --from=builder --chown=node:node /home/node/public ./public
+COPY --from=deps --chown=node:node /home/node/node_modules ./node_modules
 
 USER node
 
